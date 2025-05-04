@@ -10,6 +10,11 @@ SITL_TELEMETRY_QUEUE_NAME = "sitl.mqtt"
 MISSION_SENDER_QUEUE_NAME = "planner.mqtt"
 SAFETY_BLOCK_QUEUE_NAME = "safety"
 SECURITY_MONITOR_QUEUE_NAME = "security"
+# src/config.py
+CONTROL_SYSTEM_QUEUE_NAME = "control"
+MISSION_RECEIVER_QUEUE_NAME = "mission_receiver"
+TELEMETRY_TRANSMITTER_QUEUE_NAME = "telemetry_transmitter"
+OPERATOR_QUEUE_NAME = "operator"
 
 DEFAULT_LOG_LEVEL = 2  # 1 - errors, 2 - verbose, 3 - debug
 LOG_FAILURE = 0
