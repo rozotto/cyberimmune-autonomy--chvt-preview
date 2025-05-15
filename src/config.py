@@ -12,6 +12,7 @@ SAFETY_BLOCK_QUEUE_NAME = "safety"
 SECURITY_MONITOR_QUEUE_NAME = "security"
 # src/config.py
 CONTROL_SYSTEM_QUEUE_NAME = "control"
+RECEIVER_QUEUE_NAME = "receiver"
 MISSION_RECEIVER_QUEUE_NAME = "mission_receiver"
 TELEMETRY_TRANSMITTER_QUEUE_NAME = "telemetry_transmitter"
 OPERATOR_QUEUE_NAME = "operator"
