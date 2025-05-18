@@ -1,5 +1,5 @@
 from multiprocessing import Queue, Process
-from typing import Optional
+from typing import Optional, Set
 from queue import Empty
 
 
@@ -7,8 +7,7 @@ from time import sleep
 
 from src.config import RECEIVER_QUEUE_NAME
 from src.queues_dir import QueuesDirectory
-from src.config import COMMUNICATION_GATEWAY_QUEUE_NAME, CRITICALITY_STR, \
-    DEFAULT_LOG_LEVEL, LOG_DEBUG, LOG_ERROR, LOG_INFO
+from src.config import CRITICALITY_STR, DEFAULT_LOG_LEVEL, LOG_DEBUG, LOG_ERROR, LOG_INFO
 from src.mission_type import Mission
 from src.event_types import Event, ControlEvent
 
@@ -18,6 +17,7 @@ class ReceiverProcess(Process):
     event_source_name = RECEIVER_QUEUE_NAME
     events_q_name = event_source_name
     last_coordinate = None # для прекращения записи, когда машина остановится
+    unique_coordinates: Set[str] = set()
 
     def __init__(self, queues_dir: QueuesDirectory, log_level = DEFAULT_LOG_LEVEL):
         # вызываем конструктор базового класса
@@ -66,6 +66,7 @@ class ReceiverProcess(Process):
             if isinstance(request, ControlEvent) and request.operation == 'stop':
                 # поступил запрос на остановку монитора, поднимаем "красный флаг"
                 self._quit = True
+                self._write_coordinates_to_file()
         except Empty:
             # никаких команд не поступило, ну и ладно
             pass 
@@ -101,22 +102,31 @@ class ReceiverProcess(Process):
         if self.last_coordinate == mission : return
         self.last_coordinate = mission
         self._mission = mission
+        self.unique_coordinates.add(str(mission))
         self._log_message(LOG_DEBUG, f"получены координаты: {self._mission}")
-        self._log_message(LOG_DEBUG, "получены координаты, записываю в файл")
-        self.showReceivedCoordinats(mission)
+        self._log_message(LOG_DEBUG, "получены координаты, записываю в буфер")
 
-    def showReceivedCoordinats(self, mission: Mission):
+    def _write_coordinates_to_file(self):
+        """Записывает все уникальные координаты в файл при остановке процесса"""
         import os
         current_dir = os.path.dirname(os.path.abspath(__file__))
         file_path = os.path.join(current_dir, "telemetry.txt")
-        with open(file_path, 'a', encoding='utf-8') as file:
-            file.write(f"{mission}\n")
+        
+        try:
+            with open(file_path, 'a', encoding='utf-8') as file:
+                for coord in self.unique_coordinates:
+                    file.write(f"{coord}\n")
+            self._log_message(LOG_INFO, f"успешно записано {len(self.unique_coordinates)} координат в файл")
+        except Exception as e:
+            self._log_message(LOG_ERROR, f"ошибка записи координат в файл: {e}")
+        finally:
+            self.unique_coordinates.clear()  # Очищаем множество после записи
 
     def stop(self):
         self._control_q.put(ControlEvent(operation='stop'))
 
     def run(self):
-        self._log_message(LOG_INFO, "старт системы планирования заданийRECEIVER ")
+        self._log_message(LOG_INFO, "старт системы планирования заданий")
 
         while self._quit is False:
             sleep(self._recalc_interval_sec)
@@ -124,4 +134,4 @@ class ReceiverProcess(Process):
                 self._check_events_q()
                 self._check_control_q()
             except Exception as e:
-                self._log_message(LOG_ERROR, f"ошибка обновления координатRECEIVER: {e}")
+                self._log_message(LOG_ERROR, f"ошибка обновления координат: {e}")
